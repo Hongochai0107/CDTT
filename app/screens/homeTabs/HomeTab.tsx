@@ -1,9 +1,11 @@
+// HomeTab.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
-import CartScreen from '../screens/CartScreen';
-import HomeScreen from '../screens/HomeScreen';
-import ProfileScreen from '../screens/ProfileScreen';
+import CartScreen from '../CartScreen';
+import HomeScreen from '../HomeScreen';
+import ProfileScreen from '../ProfileScreen';
+ 
 
 const Tab = createBottomTabNavigator();
 
@@ -19,12 +21,12 @@ const HomeTab = () => {
 
           if (route.name === 'Home') {
             iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Cart') {
+            iconName = focused ? 'cart' : 'cart-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
-           } else if (route.name === 'Cart') {
-            iconName = focused ? 'cart' : 'cart-outline';
           } else {
-            iconName = 'ellipse'; // fallback
+            iconName = 'ellipse';
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
