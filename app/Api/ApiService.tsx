@@ -1,3 +1,4 @@
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, { AxiosResponse } from 'axios';
 
@@ -19,8 +20,7 @@ export async function callApi(
   method: string,
   data: any = null
 ): Promise<AxiosResponse<any>> {
-  const token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJVc2VyIERldGFpbHMiLCJpc3MiOiJFdmVudCBTY2hlZHVsZXIiLCJpYXQiOjE3NTQ1NDYwMTgsImVtYWlsIjoiaG9uZ29jaGFpMTcyNEBnbWFpbC5jb20ifQ.vlvD7xvolTIr4e--WoWE6J-_suImItRPr7gtqUO3Kng";
-  const isPublic = endpoint.startsWith('public/');
+  const token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJVc2VyIERldGFpbHMiLCJpc3MiOiJFdmVudCBTY2hlZHVsZXIiLCJpYXQiOjE3NTQ2MjI2OTMsImVtYWlsIjoiaG9uZ29jaGFpMTcyNEBnbWFpbC5jb20ifQ.ENynNgjZ-JqwWSx7LQZvZ1JFA9ah4JdbOBYrbbCGmjE";
 
   const config = {
     method,
@@ -174,4 +174,20 @@ export const getAllCategoriesWithProducts = async () => {
   }
 };
 
-
+// Lấy sản phẩm flash sale (discount > 0)
+export const getFlashSaleProducts = async () => {
+  try {
+    const response = await GET_ALL('public/products');
+    // Nếu API trả về mảng trong response.data.content
+    const allProducts = response.data.content || [];
+    // Lọc sản phẩm có discount > 0
+    const flashSaleProducts = allProducts.filter((product: any) => {
+      // Có thể là discount hoặc specialPrice, tuỳ backend
+      return (typeof product.discount === 'number' && product.discount > 0) ||
+             (typeof product.specialPrice === 'number' && product.specialPrice > 0 && product.specialPrice < product.price);
+    });
+    return flashSaleProducts;
+  } catch (error) {
+    throw error;
+  }
+};

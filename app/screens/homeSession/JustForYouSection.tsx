@@ -44,9 +44,9 @@ const JustForYouSection = () => {
     fetchProducts();
   }, []);
 
-const handlePress = (product: any) => {
-  navigation.navigate('ProductDetail', { productId: product.productId });
-};
+  const handlePress = (product: any) => {
+    navigation.navigate('ProductDetail', { productId: product.productId });
+  };
 
   const getImageUrl = (imageName: string) => {
     return imageName
