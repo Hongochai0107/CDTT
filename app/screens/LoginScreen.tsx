@@ -10,8 +10,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { loginUser } from '../Api/ApiService';
+import { loginUser, saveUserEmail } from '../Api/ApiService';
 import { RootStackParamList } from '../index';
+
 
 const LoginScreen = () => {
   type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
@@ -28,6 +29,7 @@ const LoginScreen = () => {
 
     try {
       const user = await loginUser(email, password);
+      await saveUserEmail(email);
       Alert.alert('Thành công', `Chào mừng ${user.email}!`);
       navigation.navigate('Onboarding');
     } catch (error) {
@@ -39,7 +41,6 @@ const LoginScreen = () => {
     <ImageBackground
       source={require('../../assets/images/Bubbles.png')}
       style={styles.container}
-      resizeMode="cover"
     >
       <View style={styles.overlay}>
         <View style={styles.content}>

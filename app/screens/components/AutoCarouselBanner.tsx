@@ -11,8 +11,8 @@ const { width } = Dimensions.get('window');
 
 const banners = [
   { id: 1, uri: require('../../../assets/images/banner1.png') },
-  // { id: 2, uri: require('../../../assets/images/banner2.png') },
-  // { id: 3, uri: require('../../../assets/images/banner3.png') },
+  { id: 2, uri: require('../../../assets/images/banner01.png') },
+  { id: 3, uri: require('../../../assets/images/banner3.jpg') },
 ];
 
 const AutoCarouselBanner = () => {
@@ -45,7 +45,7 @@ const AutoCarouselBanner = () => {
         {banners.map((item) => (
           <Image
             key={item.id}
-            source={{ uri: item.uri }}
+            source={item.uri }
             style={styles.bannerImage}
           />
         ))}

@@ -30,20 +30,68 @@
 //   },
 // });
 
-import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { getUserProfile } from '../Api/ApiService';
 
 const ProfileScreen = () => {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const data = await getUserProfile();
+        setUser(data);
+      } catch (err) {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const handleLogout = async () => {
+    Alert.alert('Xác nhận', 'Bạn có chắc chắn muốn đăng xuất?', [
+      { text: 'Hủy', style: 'cancel' },
+      {
+        text: 'Đăng xuất',
+        style: 'destructive',
+        onPress: async () => {
+          await AsyncStorage.multiRemove([
+            'jwt-token',
+            'user-email',
+            'user-info',
+            'cart-id',
+          ]);
+          navigation.reset({ index: 0, routes: [{ name: 'Login' as never }] });
+        },
+      },
+    ]);
+  };
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#007bff" />
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.profileContainer}>
         <Image
-          source={{ uri: 'https://via.placeholder.com/150' }}
+          source={{ uri: user?.avatar || 'https://via.placeholder.com/150' }}
           style={styles.avatar}
         />
-        <Text style={styles.name}>Nguyễn Văn A</Text>
-        <Text style={styles.email}>nguyenvana@example.com</Text>
-        <Text style={styles.phone}>+84 912345678</Text>
+        <Text style={styles.name}>{user?.firstName + ' ' + user?.lastName || 'Chưa có tên'}</Text>
+        <Text style={styles.email}>{user?.email || 'Chưa có email'}</Text>
+        <Text style={styles.phone}>{user?.mobileNumber || 'Chưa có số điện thoại'}</Text>
       </View>
 
       <View style={styles.sectionContainer}>
@@ -73,7 +121,7 @@ const ProfileScreen = () => {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.logoutButton}>
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.buttonText}>Đăng xuất</Text>
       </TouchableOpacity>
     </ScrollView>
