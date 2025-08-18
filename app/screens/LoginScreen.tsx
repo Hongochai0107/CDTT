@@ -21,6 +21,7 @@ const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ email và mật khẩu.');
@@ -69,6 +70,15 @@ const LoginScreen = () => {
           <TouchableOpacity style={styles.nextButton} onPress={handleLogin}>
             <Text style={styles.nextButtonText}>Login</Text>
           </TouchableOpacity>
+
+          {/* --- Nút Google Sign-In --- */}
+          {/* <TouchableOpacity
+            style={[styles.nextButton, { backgroundColor: '#DB4437' }]}
+            onPress={() => promptAsync()}
+            disabled={!request}
+          >
+            <Text style={styles.nextButtonText}>Continue with Google</Text>
+          </TouchableOpacity> */}
 
           <TouchableOpacity>
             <Text style={styles.cancelText}>Cancel</Text>

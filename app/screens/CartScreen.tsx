@@ -11,7 +11,6 @@ import {
   View,
 } from 'react-native';
 import { RowMap, SwipeListView } from 'react-native-swipe-list-view';
-import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { RootStackParamList } from '..';
 import {
@@ -63,7 +62,8 @@ const CartScreen = ({ navigation }: Props) => {
       x.imageUrl ?? x.image ?? x.product?.imageUrl ?? x.product?.image ?? 'https://via.placeholder.com/100',
     color: x.color ?? x.variantColor ?? null,
     size: x.size ?? x.variantSize ?? null,
-    quantity: Number(x.quantity ?? 1),
+    // quantity: Number(x.quantity ?? 1),
+    quantity: Number(1),
     cartItemId: x.id ?? x.cartItemId,
   });
 
@@ -243,10 +243,8 @@ const CartScreen = ({ navigation }: Props) => {
   return (
     <View style={styles.container}>
       <View style={styles.addressRow}>
-        <Text style={styles.addressLabel}>Shipping Address</Text>
-        <Icon name="edit" size={18} color="#007BFF" />
+        <Text style={styles.addressLabel}>Giỏ hàng</Text>
       </View>
-      <Text style={styles.addressText}>123 Đường ABC, Quận 1, TP.HCM</Text>
 
       <SwipeListView
         data={cartItems}
@@ -286,7 +284,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   addressRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  addressLabel: { fontSize: 14, fontWeight: '600' },
+  addressLabel: { fontSize: 20, fontWeight: '600', marginBottom: 16 },
   addressText: { fontSize: 14, color: '#555', marginBottom: 16 },
 
   rowFront: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 12, borderRadius: 12, marginBottom: 12, elevation: 2 },

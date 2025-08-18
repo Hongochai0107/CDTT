@@ -8,6 +8,7 @@ import axios, {
   AxiosResponse,
 } from 'axios';
 import { Platform } from 'react-native';
+import { Product } from '../index';
 
 /**
  * ============================================
@@ -15,7 +16,25 @@ import { Platform } from 'react-native';
  * ============================================
  * LƯU Ý: nếu chạy trên thiết bị thật, KHÔNG dùng localhost.
  */
-export const API_URL = process.env.EXPO_PUBLIC_API_URL?.trim() || 'http://localhost:8080/api';
+
+const ABS = (base: string, loc: string) => {
+  if (/^https?:\/\//i.test(loc)) return loc;
+  const b = base.replace(/\/+$/, '');
+  const l = loc.startsWith('/') ? loc : `/${loc}`;
+  return `${b}${l}`;
+};
+
+
+export const API_URL =
+  process.env.EXPO_PUBLIC_API_URL?.trim() ||
+  (Platform.OS === 'android' ? 'http://10.0.2.2:8080/api' : 'http://localhost:8080/api');
+
+export const AI_URL =
+  process.env.EXPO_PUBLIC_AI_URL?.trim() ||
+  (Platform.OS === 'android' ? 'http://10.0.2.2:8082/api' : 'http://localhost:8082/api');
+
+export const aiApi = axios.create({ baseURL: AI_URL });
+export const AI_POST = (url: string, data?: any) => aiApi.post(url, data);
 
 /**
  * Hàm tiện lấy URL chuẩn cho mọi fetch thủ công ngoài axios
@@ -23,6 +42,9 @@ export const API_URL = process.env.EXPO_PUBLIC_API_URL?.trim() || 'http://localh
 export function getApiUrl(path: string) {
   return `${API_URL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
 }
+
+export const imgUrl = (fileName?: string) =>
+  fileName ? getApiUrl(`/public/products/image/${fileName}`) : undefined;
 
 /** Key lưu trữ trong AsyncStorage */
 const AS_KEY_TOKEN = 'jwt-token';
@@ -251,6 +273,10 @@ export async function getUserId() {
     return null;
   }
 }
+export const clearAuthHeader = () => {
+  try { delete axios.defaults.headers.common.Authorization; } catch {}
+  try { delete (api as any).defaults.headers.common.Authorization; } catch {}
+};
 
 /**
  * ============================================
@@ -349,7 +375,7 @@ export const getProductById = async (productId: number) => {
 
 export const getAllCategoriesWithProducts = async () => {
   try {
-    const catResponse = await GET_ALL('public/categories');
+    const catResponse = await GET_ALL('public/categories?pageNumber=0&pageSize=10&sortBy=categoryId&sortOrder=asc');
     const categories = catResponse.data?.content ?? catResponse.data ?? [];
 
     const categoriesWithProducts = await Promise.all(
@@ -448,21 +474,22 @@ export async function getOrdersOfUser(email: string) {
   return res.data;
 }
 
+// ApiService.ts (bổ sung)
 
-// /** Tạo order & khởi tạo thanh toán (vnpay | cod) */
-// export async function createPaymentOrder(
-//   email: string,
-//   cartId: string | number,
-//   paymentMethod: 'vnpay' | 'cod',
-//   payload: any = {}
-// ) {
-//   const safeEmail = encodeURIComponent(email);
-//   const res = await POST<any>(
-//     `public/users/${safeEmail}/carts/${cartId}/payments/${paymentMethod}/order`,
-//     payload
-//   );
-//   return res.data; // kỳ vọng { orderId, payUrl? }
-// }
+export async function listUserOrders(email: string) {
+  const res = await GET_ALL(`public/users/${encodeURIComponent(email)}/orders`);
+  // Trả thẳng data (server có thể trả mảng trực tiếp hoặc {content:[]})
+  return Array.isArray(res.data) ? res.data : (res.data?.content ?? []);
+}
+
+export async function adminUpdateOrderStatus(email: string, orderId: string | number, orderStatus: string) {
+  const res = await PUT(
+    `admin/users/${encodeURIComponent(email)}/orders/${encodeURIComponent(String(orderId))}/orderStatus/${encodeURIComponent(orderStatus)}`,
+    {}
+  );
+  return res.data;
+}
+
 
 /** Lấy chi tiết order để kiểm tra trạng thái sau redirect VNPAY */
 export async function getOrderDetail(email: string, orderId: string | number) {
@@ -535,7 +562,7 @@ export const getAdminAddressById = async (id: number) => {
 
   const headers = {
     Accept: 'application/json',
-    ...(await authHeader()),        // ✅ dùng đúng tên, có await nếu trả về Promise
+    ...(await authHeader()),   
   };
 
   const resp = await axios.get(url, {
@@ -546,3 +573,159 @@ export const getAdminAddressById = async (id: number) => {
 
   return resp.data;
 };
+
+/**
+ * ============================================
+ *           CHAT BOT AI
+ * ============================================
+ */
+// Danh sách danh mục giả lập
+const mockCategories = [
+  { categoryId: 1, name: 'Áo', keywords: ['áo', 'áo thun', 'áo sơ mi'] },
+  { categoryId: 2, name: 'Quần', keywords: ['quần', 'jeans', 'quần short'] },
+  { categoryId: 3, name: 'Giày', keywords: ['giày', 'giày thể thao', 'sneaker'] },
+  { categoryId: 4, name: 'Túi', keywords: ['túi', 'túi xách', 'balo'] },
+  { categoryId: 5, name: 'Phụ kiện', keywords: ['đồng hồ', 'tai nghe', 'phụ kiện'] },
+];
+
+// Danh sách sản phẩm giả lập
+const mockProducts: Product[] = [
+  { productId: 1, productName: 'Áo thun nam cổ tròn', price: 150000, image: 'ao-thun-nam.jpg', categoryId: 1 },
+  { productId: 2, productName: 'Áo sơ mi nữ dài tay', price: 250000, image: 'ao-so-mi-nu.jpg', categoryId: 1 },
+  { productId: 3, productName: 'Quần jeans nam slimfit', price: 350000, image: 'quan-jeans-nam.jpg', categoryId: 2 },
+  { productId: 4, productName: 'Giày thể thao trắng', price: 500000, image: 'giay-the-thao.jpg', categoryId: 3 },
+  { productId: 5, productName: 'Túi xách da nữ', price: 450000, image: 'tui-xach-nu.jpg', categoryId: 4 },
+  { productId: 6, productName: 'Đồng hồ thông minh', price: 1200000, image: 'dong-ho-thong-minh.jpg', categoryId: 5 },
+];
+
+// Hàm mock trả về phản hồi văn bản
+const mockChatResponse = (messages: Array<{ role: string; content: string }>): string => {
+  const lastMessage = messages[messages.length - 1]?.content.toLowerCase() || '';
+
+  if (lastMessage.includes('giảm giá') || lastMessage.includes('khuyến mãi')) {
+    return 'Hiện tại có chương trình giảm giá: Áo thun giảm 20%, Quần jeans giảm 15%, Giày thể thao giảm 10%. Bạn muốn xem chi tiết sản phẩm nào?';
+  }
+
+  if (lastMessage.includes('sản phẩm') || lastMessage.includes('mua gì')) {
+    return 'Mình gợi ý một số sản phẩm hot: Áo thun nam, Quần jeans slimfit, Đồng hồ thông minh. Bạn thích loại nào?';
+  }
+
+  const matchedCategory = mockCategories.find((cat) =>
+    cat.keywords.some((keyword) => lastMessage.includes(keyword))
+  );
+  if (matchedCategory) {
+    return `Mình tìm thấy một số sản phẩm trong danh mục "${matchedCategory.name}". Xem danh sách bên dưới nhé!`;
+  }
+
+  if (lastMessage.includes('giỏ hàng') || lastMessage.includes('cart')) {
+    return 'Bạn muốn kiểm tra giỏ hàng hay thêm sản phẩm vào giỏ?';
+  }
+
+  if (lastMessage.includes('đặt hàng') || lastMessage.includes('order')) {
+    return 'Để đặt hàng, bạn hãy chọn sản phẩm và cung cấp địa chỉ giao hàng. Mình có thể gợi ý sản phẩm nếu bạn muốn!';
+  }
+
+  return 'Mình là trợ lý mua sắm, có thể gợi ý sản phẩm, kiểm tra giỏ hàng, hoặc giải đáp thắc mắc. Bạn cần giúp gì?';
+};
+
+// Hàm tìm kiếm sản phẩm
+export async function searchProducts(
+  query: string,
+  useMock: boolean,
+): Promise<Product[]> {
+  if (!query?.trim()) {
+    throw new Error('Từ khóa tìm kiếm không được để trống');
+  }
+
+  if (useMock) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const lowerQuery = query.toLowerCase();
+    const matchedCategory = mockCategories.find((cat) =>
+      cat.keywords.some((keyword) => lowerQuery.includes(keyword))
+    );
+
+    const filteredProducts = mockProducts.filter(
+      (p) =>
+        p.productName.toLowerCase().includes(lowerQuery) ||
+        (matchedCategory && p.categoryId === matchedCategory.categoryId)
+    );
+
+    if (filteredProducts.length === 0) {
+      throw new Error('Không tìm thấy sản phẩm nào phù hợp');
+    }
+
+    return filteredProducts.slice(0, 5);
+  }
+
+  try {
+    const res = await GET_ALL(`public/products/keyword/${encodeURIComponent(query.trim())}`);
+    const rawList = Array.isArray(res.data)
+      ? res.data
+      : res.data?.content ?? res.data?.items ?? [];
+
+    if (rawList.length === 0) {
+      throw new Error('Không tìm thấy sản phẩm nào phù hợp');
+    }
+
+    return rawList.map((item: any) => ({
+      productId: item.productId,
+      productName: item.productName || item.name || '(Không có tên)',
+      price: Number(item.price) || 0,
+      image: item.image,
+      categoryId: item.categoryId,
+    })) as Product[];
+  } catch (error) {
+    logAxiosError('GET', `public/products/keyword/${query}`, error);
+    throw error;
+  }
+}
+
+// Hàm gửi tin nhắn chatbot
+export async function sendChatMessage(
+  messages: Array<{ role: string; content: string }>,
+  useMock: boolean = false
+): Promise<{ reply: string; products?: Product[] }> {
+  if (!messages?.length) {
+    throw new Error('Danh sách tin nhắn không được để trống');
+  }
+
+  const lastMessage = messages[messages.length - 1]?.content.toLowerCase() || '';
+  const isSearchQuery = mockCategories.some((cat) =>
+    cat.keywords.some((keyword) => lastMessage.includes(keyword))
+  ) || lastMessage.includes('sản phẩm');
+
+  if (useMock) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const reply = mockChatResponse(messages);
+    if (isSearchQuery) {
+      try {
+        const products = await searchProducts(lastMessage, true);
+        return { reply, products: products.length > 0 ? products : undefined };
+      } catch (error) {
+        return { reply: `${reply} (Không tìm thấy sản phẩm phù hợp)` };
+      }
+    }
+    return { reply };
+  }
+
+  try {
+    const res = await AI_POST('public/ai/chat', { messages });
+    // Đảm bảo reply luôn là chuỗi
+    const reply = typeof res.data === 'string'
+      ? res.data
+      : res.data?.reply || res.data?.content || res.data?.message || '[Không có nội dung trả về]';
+
+    if (isSearchQuery) {
+      try {
+        const products = await searchProducts(lastMessage, false);
+        return { reply, products: products.length > 0 ? products : undefined };
+      } catch (error) {
+        return { reply: `${reply} (Không tìm thấy sản phẩm phù hợp)` };
+      }
+    }
+    return { reply };
+  } catch (error) {
+    logAxiosError('POST', 'public/ai/chat', error);
+    throw error instanceof Error ? error : new Error('Lỗi không xác định từ API');
+  }
+}

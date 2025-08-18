@@ -1,19 +1,22 @@
-// app/screens/AddressScreen.tsx
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Modal,
-    RefreshControl,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Modal,
+  RefreshControl,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { DELETE, GET_ALL, POST, PUT } from '../Api/ApiService';
+
+import { DELETE_ID, GET_ALL, POST, PUT } from '../Api/ApiService';
+import type { RootStackParamList } from '../index';
 
 // ---- Types (UI dùng camelCase) ----
 type Address = {
@@ -49,6 +52,10 @@ const toApi = (a: Address) => ({
 });
 
 export default function AddressScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute();
+  const mode: 'manage' | 'select' = ((route.params as any)?.mode ?? 'manage') as any;
+
   const [items, setItems] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -67,11 +74,11 @@ export default function AddressScreen() {
   });
 
   const validate = (): string | null => {
-    if (!form.street.trim()) return 'Vui lòng nhập street';
-    if (!form.city.trim()) return 'Vui lòng nhập city';
-    if (!form.state.trim()) return 'Vui lòng nhập state';
-    if (!form.country.trim()) return 'Vui lòng nhập country';
-    if (!form.pincode.trim()) return 'Vui lòng nhập pincode';
+    if (!form.street.trim()) return 'Vui lòng nhập Street';
+    if (!form.city.trim()) return 'Vui lòng nhập City';
+    if (!form.state.trim()) return 'Vui lòng nhập State';
+    if (!form.country.trim()) return 'Vui lòng nhập Country';
+    if (!form.pincode.trim()) return 'Vui lòng nhập Pincode';
     return null;
   };
 
@@ -148,7 +155,7 @@ export default function AddressScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
-            await DELETE('admin/addresses', addr.addressId!);
+            await DELETE_ID('admin/addresses', addr.addressId!);
             setItems(prev => prev.filter(x => x.addressId !== addr.addressId));
           } catch (e: any) {
             Alert.alert('Không thể xóa', e?.response?.data?.message || 'Đã xảy ra lỗi');
@@ -158,6 +165,16 @@ export default function AddressScreen() {
     ]);
   };
 
+  const selectAddress = (addr: Address) => {
+    // Gửi địa chỉ về Payment và merge params
+    navigation.navigate({
+      name: 'Payment',
+      params: { address: addr },
+      merge: true,
+    } as any);
+    navigation.goBack();
+  };
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -165,10 +182,12 @@ export default function AddressScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Quản lý địa chỉ</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={openCreate}>
-          <Text style={styles.addBtnText}>+ Thêm</Text>
-        </TouchableOpacity>
+        <Text style={styles.title}>{mode === 'select' ? 'Chọn địa chỉ' : 'Quản lý địa chỉ'}</Text>
+        {mode !== 'select' && (
+          <TouchableOpacity style={styles.addBtn} onPress={openCreate}>
+            <Text style={styles.addBtnText}>+ Thêm</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {loading ? (
@@ -179,9 +198,11 @@ export default function AddressScreen() {
       ) : items.length === 0 ? (
         <View style={styles.center}>
           <Text style={styles.muted}>Chưa có địa chỉ nào</Text>
-          <TouchableOpacity style={[styles.addBtn, { marginTop: 12 }]} onPress={openCreate}>
-            <Text style={styles.addBtnText}>Thêm địa chỉ</Text>
-          </TouchableOpacity>
+          {mode !== 'select' && (
+            <TouchableOpacity style={[styles.addBtn, { marginTop: 12 }]} onPress={openCreate}>
+              <Text style={styles.addBtnText}>Thêm địa chỉ</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         <FlatList
@@ -208,6 +229,15 @@ export default function AddressScreen() {
                   <Text style={styles.btnText}>Xóa</Text>
                 </TouchableOpacity>
               </View>
+
+              {mode === 'select' && (
+                <TouchableOpacity
+                  style={[styles.addBtn, { marginTop: 10, alignSelf: 'flex-end', backgroundColor: '#111827' }]}
+                  onPress={() => selectAddress(item)}
+                >
+                  <Text style={styles.addBtnText}>Chọn</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         />

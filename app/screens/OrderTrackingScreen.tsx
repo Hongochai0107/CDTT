@@ -1,26 +1,26 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import axios from 'axios';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-
-// ⬇️ Lấy helper từ ApiService (đường dẫn giữ giống nơi bạn import ở CartScreen)
 import { getApiUrl, getUserEmail } from '../Api/ApiService';
+import type { RootStackParamList } from '../index';
 
-type OrderTrackingParams = {
-  orderId: number;
-  code?: string;
-};
+/** Route + Nav types */
+type OrderTrackingParams = { orderId: string | number; code?: string };
+type OrderTrackingRoute = RouteProp<{ OrderTracking: OrderTrackingParams }, 'OrderTracking'>;
+type RootNav = NativeStackNavigationProp<RootStackParamList>;
 
 type OrderStatus =
   | 'PENDING'
@@ -84,9 +84,9 @@ function currency(v: number | undefined) {
 }
 
 export default function OrderTrackingScreen() {
-  const route = useRoute<RouteProp<{ OrderTracking: OrderTrackingParams }, 'OrderTracking'>>();
-  const navigation = useNavigation();
-  const { orderId, code } = route.params ?? {};
+  const route = useRoute<OrderTrackingRoute>();
+  const navigation = useNavigation<RootNav>();
+  const { orderId, code } = route.params ?? { orderId: '' };
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -98,74 +98,82 @@ export default function OrderTrackingScreen() {
     [order?.status]
   );
 
-const fetchOrder = useCallback(async () => {
-  if (!orderId) {
-    setError('Thiếu orderId để tải đơn hàng.');
-    setLoading(false);
-    return;
-  }
-  setError(null);
-  try {
-    setLoading(true);
+  /** Quay về trang chủ (reset stack) */
+  const goHome = useCallback(() => {
+    // Reset stack về màn 'Main' (HomeTab). Đổi thành 'Home' nếu muốn.
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Main' as never }],
+    } as never);
+  }, [navigation]);
 
-    const emailId = (await getUserEmail()) || '';
-    if (!emailId) throw new Error('Chưa đăng nhập hoặc chưa lưu email.');
+  const fetchOrder = useCallback(async () => {
+    if (!orderId) {
+      setError('Thiếu orderId để tải đơn hàng.');
+      setLoading(false);
+      return;
+    }
+    setError(null);
+    try {
+      setLoading(true);
 
-    const url = getApiUrl(`/public/users/${emailId}/orders/${orderId}`);
+      const emailId = (await getUserEmail()) || '';
+      if (!emailId) throw new Error('Chưa đăng nhập hoặc chưa lưu email.');
 
-    const token =
-      (await AsyncStorage.getItem('jwt-token')) ||
-      (await AsyncStorage.getItem('accessToken')) ||
-      (await AsyncStorage.getItem('token')) ||
-      (await AsyncStorage.getItem('jwtToken'));
+      const url = getApiUrl(`/public/users/${emailId}/orders/${orderId}`);
 
-    const res = await axios.get(url, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    });
+      const token =
+        (await AsyncStorage.getItem('jwt-token')) ||
+        (await AsyncStorage.getItem('accessToken')) ||
+        (await AsyncStorage.getItem('token')) ||
+        (await AsyncStorage.getItem('jwtToken'));
 
-    const raw = res.data ?? {};
-    const items: OrderItem[] = (raw.items ?? raw.orderItems ?? []).map((it: any) => {
-      const p = it.product ?? {};
-      const id = p.id ?? p.productId ?? it.productId ?? it.id;
-      const name = p.name ?? it.productName ?? it.name ?? `SP #${id ?? ''}`;
-      const image = p.image ?? p.imageUrl ?? it.image ?? it.thumbnail;
-      const price = Number(it.price ?? it.unitPrice ?? p.price ?? 0);
-      const quantity = Number(it.quantity ?? it.qty ?? 1);
-      return { id, name, image, price, quantity };
-    });
+      const res = await axios.get(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
 
-    const normalized: Order = {
-      id: raw.id ?? raw.orderId ?? orderId,
-      code: raw.code ?? raw.orderCode ?? code,
-      status: ((raw.status ?? 'PLACED') as string).toUpperCase() as OrderStatus,
-      createdAt: raw.createdAt ?? raw.created_date ?? raw.createdDate,
-      updatedAt: raw.updatedAt ?? raw.updated_date ?? raw.updatedDate,
-      items,
-      shippingAddress:
-        raw.shippingAddress ??
-        raw.address ?? {
-          fullName: raw.receiverName,
-          phone: raw.receiverPhone,
-          line1: raw.addressLine,
-          ward: raw.ward,
-          district: raw.district,
-          city: raw.city,
-        },
-      total: Number(raw.total ?? raw.totalPrice ?? 0),
-      shippingFee: Number(raw.shippingFee ?? raw.shipFee ?? 0),
-      note: raw.note,
-      courier: raw.courier ?? raw.shipping ?? undefined,
-    };
+      const raw = res.data ?? {};
+      const items: OrderItem[] = (raw.items ?? raw.orderItems ?? []).map((it: any) => {
+        const p = it.product ?? {};
+        const id = p.id ?? p.productId ?? it.productId ?? it.id;
+        const name = p.name ?? it.productName ?? it.name ?? `SP #${id ?? ''}`;
+        const image = p.image ?? p.imageUrl ?? it.image ?? it.thumbnail;
+        const price = Number(it.price ?? it.unitPrice ?? p.price ?? 0);
+        const quantity = Number(it.quantity ?? it.qty ?? 1);
+        return { id, name, image, price, quantity };
+      });
 
-    setOrder(normalized);
-  } catch (e: any) {
-    console.error('Load order failed', e?.response?.data ?? e?.message);
-    setError(e?.response?.data?.message ?? e?.message ?? 'Không tải được đơn hàng.');
-  } finally {
-    setLoading(false);
-  }
-}, [orderId, code]);
+      const normalized: Order = {
+        id: raw.id ?? raw.orderId ?? orderId,
+        code: raw.code ?? raw.orderCode ?? code,
+        status: ((raw.status ?? 'PLACED') as string).toUpperCase() as OrderStatus,
+        createdAt: raw.createdAt ?? raw.created_date ?? raw.createdDate,
+        updatedAt: raw.updatedAt ?? raw.updated_date ?? raw.updatedDate,
+        items,
+        shippingAddress:
+          raw.shippingAddress ??
+          raw.address ?? {
+            fullName: raw.receiverName,
+            phone: raw.receiverPhone,
+            line1: raw.addressLine,
+            ward: raw.ward,
+            district: raw.district,
+            city: raw.city,
+          },
+        total: Number(raw.total ?? raw.totalPrice ?? 0),
+        shippingFee: Number(raw.shippingFee ?? raw.shipFee ?? 0),
+        note: raw.note,
+        courier: raw.courier ?? raw.shipping ?? undefined,
+      };
 
+      setOrder(normalized);
+    } catch (e: any) {
+      console.error('Load order failed', e?.response?.data ?? e?.message);
+      setError(e?.response?.data?.message ?? e?.message ?? 'Không tải được đơn hàng.');
+    } finally {
+      setLoading(false);
+    }
+  }, [orderId, code]);
 
   useEffect(() => {
     fetchOrder();
@@ -193,6 +201,9 @@ const fetchOrder = useCallback(async () => {
         <TouchableOpacity style={styles.button} onPress={fetchOrder}>
           <Text style={styles.buttonText}>Thử lại</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={[styles.button, styles.buttonOutline, { marginTop: 10 }]} onPress={goHome}>
+          <Text style={[styles.buttonText, { color: '#0b6bcb' }]}>Về trang chủ</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -201,6 +212,9 @@ const fetchOrder = useCallback(async () => {
     return (
       <View style={styles.center}>
         <Text>Không có dữ liệu đơn hàng.</Text>
+        <TouchableOpacity style={[styles.button, styles.buttonOutline, { marginTop: 10 }]} onPress={goHome}>
+          <Text style={[styles.buttonText, { color: '#0b6bcb' }]}>Về trang chủ</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -239,9 +253,7 @@ const fetchOrder = useCallback(async () => {
         </View>
         <Text style={styles.dateLine}>
           Tạo: {order.createdAt ? new Date(order.createdAt).toLocaleString('vi-VN') : '—'}
-          {order.updatedAt
-            ? `  ·  Cập nhật: ${new Date(order.updatedAt).toLocaleString('vi-VN')}`
-            : ''}
+          {order.updatedAt ? `  ·  Cập nhật: ${new Date(order.updatedAt).toLocaleString('vi-VN')}` : ''}
         </Text>
       </View>
 
@@ -359,6 +371,12 @@ const fetchOrder = useCallback(async () => {
             <Text style={[styles.buttonText, { color: '#0b6bcb' }]}>Xem mã vận đơn</Text>
           </TouchableOpacity>
         )}
+
+        {/* Nút về trang chủ */}
+        <TouchableOpacity style={[styles.button, styles.buttonOutline]} onPress={goHome}>
+          <Text style={[styles.buttonText, { color: '#0b6bcb' }]}>Về trang chủ</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.button} onPress={onRefresh}>
           <Text style={styles.buttonText}>Làm mới</Text>
         </TouchableOpacity>

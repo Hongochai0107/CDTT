@@ -163,7 +163,7 @@ const ProductDetailScreen: React.FC = () => {
 
           <Text style={styles.description}>{product.description || 'Mô tả sản phẩm đang cập nhật...'}</Text>
 
-          <Text style={styles.label}>Color Options</Text>
+          <Text style={styles.label}>Màu sắc</Text>
           <FlatList
             horizontal
             data={colors}
@@ -180,7 +180,7 @@ const ProductDetailScreen: React.FC = () => {
             showsHorizontalScrollIndicator={false}
           />
 
-          <Text style={styles.label}>Size</Text>
+          <Text style={styles.label}>Kích thước</Text>
           <View style={styles.sizeContainer}>
             {sizes.map((sz) => (
               <TouchableOpacity
@@ -193,7 +193,7 @@ const ProductDetailScreen: React.FC = () => {
             ))}
           </View>
 
-          <Text style={styles.label}>Quantity</Text>
+          <Text style={styles.label}>Số lượng</Text>
           <View style={styles.quantityContainer}>
             <TouchableOpacity onPress={() => setQuantity(Math.max(1, quantity - 1))}>
               <Text style={styles.quantityButton}>-</Text>
@@ -215,11 +215,11 @@ const ProductDetailScreen: React.FC = () => {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.cartBtn} onPress={handleAddToCart}>
-          <Text style={styles.buttonText}>Add to cart</Text>
+          <Text style={styles.buttonText}>Thêm giỏ hàng</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.buyBtn}>
-          <Text style={styles.buttonText}>Buy now</Text>
+          <Text style={styles.buttonText}>Mua ngay</Text>
         </TouchableOpacity>
       </View>
     </View>
