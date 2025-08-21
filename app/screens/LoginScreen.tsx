@@ -71,6 +71,13 @@ const LoginScreen = () => {
             <Text style={styles.nextButtonText}>Login</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
+            <Text style={{ color: "#0d6efd", textAlign: "center", marginTop: 10 }}>
+              Quên mật khẩu?
+            </Text>
+          </TouchableOpacity>
+
+
           {/* --- Nút Google Sign-In --- */}
           {/* <TouchableOpacity
             style={[styles.nextButton, { backgroundColor: '#DB4437' }]}

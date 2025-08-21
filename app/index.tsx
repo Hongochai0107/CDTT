@@ -8,6 +8,7 @@ import CategoryProductScreen from './screens/CategoryProductScreen';
 import ChatbotScreen from './screens/ChatbotScreen';
 import FloatingChatBubble from './screens/components/FloatingChatBubble';
 import { CartProvider } from './screens/context/CartContext';
+import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import HomeScreen from './screens/HomeScreen';
 import HomeTab from './screens/homeTabs/HomeTab';
 import LoginScreen from './screens/LoginScreen';
@@ -17,6 +18,7 @@ import OrderTrackingScreen from './screens/OrderTrackingScreen';
 import PaymentScreen from './screens/PaymentScreen';
 import ProductDetailScreen from './screens/ProductDetailScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import RegisterScreen from './screens/RegisterScreen';
 import SearchProductsScreen from './screens/SearchProductsScreen';
 import StartScreen from './screens/StartScreen';
 
@@ -42,6 +44,8 @@ export type RootStackParamList = {
   Search: { initialQuery?: string } | undefined;
   Chatbot: undefined;
   Orders: undefined;
+  ForgotPassword: undefined;
+  Register:{ email?: string; password?: string | number } | undefined;
 };
 
 export interface Product {
@@ -67,6 +71,12 @@ const App = () => {
             />
 
             <Stack.Screen
+              name="Register"
+              component={RegisterScreen}
+              options={{ title: 'Đăng ký' }}
+            />
+
+            <Stack.Screen
               name="Chatbot"
               component={ChatbotScreen}
               options={{ title: 'Chatbot AI' }}
@@ -87,6 +97,11 @@ const App = () => {
               name="Login" 
               component={LoginScreen} 
               options={{ headerShown: false }} 
+            />
+
+            <Stack.Screen name="ForgotPassword"
+             component={ForgotPasswordScreen}
+              options={{ title: "Quên mật khẩu" }} 
             />
 
             <Stack.Screen

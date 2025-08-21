@@ -26,7 +26,7 @@ const navigation = useNavigation<StartScreenNavigationProp>();
       {/* Nút chính */}
       <TouchableOpacity
         style={styles.getStartedButton}
-        onPress={() => navigation.navigate('Main')}
+        onPress={() => navigation.navigate('Register')}
         >
         <Text style={styles.buttonText}>Let's get started</Text>
       </TouchableOpacity>
